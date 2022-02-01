@@ -1,10 +1,8 @@
 package project.bfour.debtormaintenance.model;
 
-import java.io.Serializable;
-
-public class Transaction implements Serializable {
-    private String debtorId;
-    private String id;
+public class Transaction {
+    private int bankFormId;
+    private String transactionId;
     private String dateTime;
     private String status;
     private String information;
@@ -12,28 +10,28 @@ public class Transaction implements Serializable {
     public Transaction() {
     }
 
-    public Transaction(String debtorId, String id, String dateTime, String status, String information) {
-        this.debtorId = debtorId;
-        this.id = id;
+    public Transaction(int bankFormId, String transactionId, String dateTime, String status, String information) {
+        this.bankFormId = bankFormId;
+        this.transactionId = transactionId;
         this.dateTime = dateTime;
         this.status = status;
         this.information = information;
     }
 
-    public String getDebtorId() {
-        return debtorId;
+    public int getBankFormId() {
+        return bankFormId;
     }
 
-    public void setDebtorId(String debtorId) {
-        this.debtorId = debtorId;
+    public void setBankFormId(int bankFormId) {
+        this.bankFormId = bankFormId;
     }
 
-    public String getId() {
-        return id;
+    public String getTransactionId() {
+        return transactionId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
     }
 
     public String getDateTime() {
@@ -60,4 +58,14 @@ public class Transaction implements Serializable {
         this.information = information;
     }
 
+    @Override
+    public String toString() {
+        return "Transaction{" +
+                "bankFormId=" + bankFormId +
+                ", transactionId='" + transactionId + '\'' +
+                ", dateTime='" + dateTime + '\'' +
+                ", status='" + status + '\'' +
+                ", information='" + information + '\'' +
+                '}';
+    }
 }

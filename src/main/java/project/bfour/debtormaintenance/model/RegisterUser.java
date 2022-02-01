@@ -1,19 +1,18 @@
 package project.bfour.debtormaintenance.model;
 
-import java.util.Objects;
-
-public class User {
+public class RegisterUser {
 
     private String username;
     private String password;
+    private String confirmPassword;
 
-    public User() 
-    {
-    	
+    public RegisterUser() {
     }
-    public User(String username, String password) {
+
+    public RegisterUser(String username, String password, String confirmPassword) {
         this.username = username;
         this.password = password;
+        this.confirmPassword = confirmPassword;
     }
 
     public String getUsername() {
@@ -32,16 +31,20 @@ public class User {
         this.password = password;
     }
 
-    @Override
-    public String toString() {
-        return "User{" +
-                "username='" + username + '\'' +
-                ", password='" + password + '\'' +
-                '}';
+    public String getConfirmPassword() {
+        return confirmPassword;
     }
 
-    public boolean equals(User o) 
-    {
-        return username.equals(o.username) && password.equals(o.password);
+    public void setConfirmPassword(String confirmPassword) {
+        this.confirmPassword = confirmPassword;
+    }
+
+    @Override
+    public String toString() {
+        return "RegisterUser{" +
+                "username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                ", confirmPassword='" + confirmPassword + '\'' +
+                '}';
     }
 }

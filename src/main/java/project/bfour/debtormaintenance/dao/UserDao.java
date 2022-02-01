@@ -1,103 +1,105 @@
 package project.bfour.debtormaintenance.dao;
 
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
 import project.bfour.debtormaintenance.model.User;
 
+import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.sql.*;
 
+
+@Repository
 public class UserDao {
-//    Register
-    public int register (User user) throws SQLException {
-        int status = 0;
-        Connection c = MySqlConn.getCon();
-        PreparedStatement ps = c.prepareStatement("select * from user where username=?");
-        ps.setString(1, user.getUsername());
-        ResultSet resultSet = ps.executeQuery();
 
-//        Checking User for the existence
-        while (resultSet.next()) {
-            if (user.getUsername().equals(resultSet.getString(1))) {
-//                User already Registered
-                return status;
-            }
+    public DataSource datasource() {
+        return DataSourceBuilder.create()
+                .driverClassName("com.mysql.cj.jdbc.Driver")
+                .url("jdbc:mysql://localhost:3306/project")
+                .username("root")
+                .password("Mysql@123")
+                .build();
+    }
+    
+    DataSource dataSource = datasource();
+
+    //    Register
+    public int register (User user) {
+        int status;
+        String checkUsername = "select count(*) from user where username=?";
+        JdbcTemplate jdbcTemplate  = new JdbcTemplate(dataSource);
+        int exists = jdbcTemplate.queryForObject(checkUsername, Integer.class, new Object[] {user.getUsername()});//queryForObject used to retrive the data
+        if (exists>0) 
+        {
+            return -1;
         }
-
-        PreparedStatement pst = c.prepareStatement("insert into user(username, password, uid) values (?,?,?)");
-        pst.setString(1, user.getUsername());
-        pst.setString(2, user.getPassword());
-        pst.setString(3, getNewDebId(c));
-        status = pst.executeUpdate();
+        
+        String hashedPassword = applySha256(user.getPassword());
+        String register = "insert into user(username, password, uid) values (?,?,?)";
+        status = jdbcTemplate.update(register, user.getUsername(), hashedPassword, getNewDebId());
         return status;
     }
 
-//    Login
-    public int validate (User user, String who) throws SQLException {
-        Connection c = MySqlConn.getCon();
-        PreparedStatement ps;
-        if (who.equals("deb")) {
-            ps = c.prepareStatement("select * from user where username=? and uid like 'deb-%'");
+    //    Login
+    public int validate (User user, String who) {
+        String nameQuery;
+        String countQuery;
+        String passQuery;
+        if (who.equals("deb")) 
+        {
+            countQuery = "select count(*) from user where username=\""+ user.getUsername() + "\" and uid like 'deb-%'";
+            nameQuery = "select username from user where username=\""+ user.getUsername() + "\" and uid like 'deb-%'";
+            passQuery = "select password from user where username=\""+ user.getUsername() + "\" and uid like 'deb-%'";
         } else {
-            ps = c.prepareStatement("select * from user where username=? and uid like 'adm-%'");
+            countQuery = "select count(*) from user where username=\""+ user.getUsername() + "\" and uid like 'adm-%'";
+            nameQuery = "select username from user where username=\""+ user.getUsername() + "\" and uid like 'adm-%'";
+            passQuery = "select password from user where username=\""+ user.getUsername() + "\" and uid like 'adm-%'";
         }
-        ps.setString(1, user.getUsername());
-        ResultSet resultSet = ps.executeQuery();
-        int status = 0;
-        if (resultSet.next()) {
-            if (resultSet.getString("username").equals(user.getUsername()) &&
-                    resultSet.getString("password").equals(user.getPassword())) {
-//                sout(resultSet.getString("username") + " "
-//                        + resultSet.getString("password"));
-//
-//                sout(user.getUsername() + " " + user.getPassword());
-//                User Exists"
-                status = 1;
-            }
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 
-//            Checking for incorrect password
-            else if (resultSet.getString(1).equals(user.getUsername()) &&
-                    !resultSet.getString(2).equals(user.getPassword())) {
-//                sout(resultSet.getString(1) + " "
-//                        + resultSet.getString(2));
-//                sout(user.getUsername() + " " + user.getPassword());
-
-//                PassWord Incorrect
-                status = 10;
-            }
+        int userExists = jdbcTemplate.queryForObject(countQuery, Integer.class);
+        if (userExists == 0) {
+            return 0;
         }
-        return status;
+
+        String un = jdbcTemplate.queryForObject(nameQuery, String.class);
+        String pw = jdbcTemplate.queryForObject(passQuery, String.class);
+        User dbUser = new User(un, pw);
+        user.setPassword(applySha256(user.getPassword()));
+        if (dbUser.equals(user)) {
+            return 1;
+        } else if (dbUser.getUsername().equals(user.getUsername()) &&
+                !dbUser.getPassword().equals(user.getPassword())) {
+            return 10;
+        }
+        return 0;
     }
 
-    private static String getNewDebId (Connection connection) throws SQLException {
+//About debtorID new Genarate 
+    private String getNewDebId () {
         String uid;
-        Statement statement = connection.createStatement();
-        ResultSet resultSet;
         String checkQuery = "select count(*) as count from user where uid like \"deb-%\"";
-        resultSet = statement.executeQuery(checkQuery);
-        resultSet.next();
-        if (resultSet.getInt("count") == 0) {
+        JdbcTemplate jdbcTemplate  = new JdbcTemplate(dataSource);
+        int count = jdbcTemplate.queryForObject(checkQuery, Integer.class);
+        if (count == 0) {
             return "deb-100";
         }
         String query = "select max(uid) as max from user where uid like \"deb-%\"";
-        resultSet = statement.executeQuery(query);
-        resultSet.next();
-        uid = resultSet.getString("max");
+        uid = jdbcTemplate.queryForObject(query, String.class);
         uid = uid.replace("deb-", "");
         int id = Integer.parseInt(uid);
         return "deb-" + (++id);
     }
 
-//    returns uid->who
-    public String getUid(Connection connection, String username) throws SQLException {
+    //    returns uid->who
+    public String getUid(String username) {
         String query = "select uid from user where username=\"" + username + "\"";
-        Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery(query);
-        resultSet.next();
-        return resultSet.getString("uid");
-
+        JdbcTemplate jdbcTemplate  = new JdbcTemplate(dataSource);
+        return jdbcTemplate.queryForObject(query, String.class);
     }
 
-//    applies 256-bit encryption
+    //    applies 256-bit encryption
     public static String applySha256(String input){
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -115,4 +117,5 @@ public class UserDao {
             throw new RuntimeException(e);
         }
     }
+
 }

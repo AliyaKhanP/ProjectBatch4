@@ -1,9 +1,8 @@
 package project.bfour.debtormaintenance.model;
 
-import java.io.Serializable;
 
-public class BankAccount implements Serializable {
-    private String debtorId;
+public class BankAccount {
+    private int debtorFormId;
     private long number;
     private String bankName;
     private String branchName;
@@ -13,8 +12,8 @@ public class BankAccount implements Serializable {
     public BankAccount() {
     }
 
-    public BankAccount(String debtorId, long number, String bankName, String branchName, String swiftAddress, String accountCurrency) {
-        this.debtorId = debtorId;
+    public BankAccount(int debtorFormId, long number, String bankName, String branchName, String swiftAddress, String accountCurrency) {
+        this.debtorFormId = debtorFormId;
         this.number = number;
         this.bankName = bankName;
         this.branchName = branchName;
@@ -22,12 +21,12 @@ public class BankAccount implements Serializable {
         this.accountCurrency = accountCurrency;
     }
 
-    public String getDebtorId() {
-        return debtorId;
+    public int getDebtorFormId() {
+        return debtorFormId;
     }
 
-    public void setDebtorId(String debtorId) {
-        this.debtorId = debtorId;
+    public void setDebtorFormId(int debtorFormId) {
+        this.debtorFormId = debtorFormId;
     }
 
     public long getNumber() {
@@ -68,5 +67,17 @@ public class BankAccount implements Serializable {
 
     public void setAccountCurrency(String accountCurrency) {
         this.accountCurrency = accountCurrency;
+    }
+
+    @Override
+    public String toString() {
+        return "BankAccount{" +
+                "debtorFormId=" + debtorFormId +
+                ", number=" + number +
+                ", bankName='" + bankName + '\'' +
+                ", branchName='" + branchName + '\'' +
+                ", swiftAddress='" + swiftAddress + '\'' +
+                ", accountCurrency='" + accountCurrency + '\'' +
+                '}';
     }
 }

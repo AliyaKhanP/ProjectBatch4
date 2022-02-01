@@ -1,7 +1,8 @@
 package project.bfour.debtormaintenance.model;
 
 public class DetailsForm {
-//    Debtor form
+
+    //    Debtor form
     private String Id; // uid
     private String name;
     private String address1;
@@ -10,40 +11,18 @@ public class DetailsForm {
     private long phone;
     private String email;
 
-//    Bank Form
+    //    Bank Form
     private long number;
     private String bankName;
     private String branchName;
     private String swiftAddress;
     private String accountCurrency;
 
-//    Transaction
+    //    Transaction
     private String txnId;
     private String dateTime;
     private String status;
     private String information;
-
-    @Override
-    public String toString() {
-        return "DetailsForm{" +
-                "Id='" + Id + '\'' +
-                ", name='" + name + '\'' +
-                ", address1='" + address1 + '\'' +
-                ", address2='" + address2 + '\'' +
-                ", fax=" + fax +
-                ", phone=" + phone +
-                ", email='" + email + '\'' +
-                ", number=" + number +
-                ", bankName='" + bankName + '\'' +
-                ", branchName='" + branchName + '\'' +
-                ", swiftAddress='" + swiftAddress + '\'' +
-                ", accountCurrency='" + accountCurrency + '\'' +
-                ", txnId='" + txnId + '\'' +
-                ", dateTime='" + dateTime + '\'' +
-                ", status='" + status + '\'' +
-                ", information='" + information + '\'' +
-                '}';
-    }
 
     public DetailsForm() {
     }

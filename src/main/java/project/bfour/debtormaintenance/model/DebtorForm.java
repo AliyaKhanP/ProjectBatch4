@@ -1,9 +1,9 @@
 package project.bfour.debtormaintenance.model;
 
-import java.io.Serializable;
+public class DebtorForm {
 
-public class DebtorForm implements Serializable {
-    private String Id;
+    private String debtorId; // Debtor ID
+    private int debtorFormId;
     private String name;
     private String address1;
     private String address2;
@@ -14,8 +14,9 @@ public class DebtorForm implements Serializable {
     public DebtorForm() {
     }
 
-    public DebtorForm(String id, String name, String address1, String address2, long fax, long phone, String email) {
-        Id = id;
+    public DebtorForm(String debtorId, int debtorFormId, String name, String address1, String address2, long fax, long phone, String email) {
+        this.debtorId = debtorId;
+        this.debtorFormId = debtorFormId;
         this.name = name;
         this.address1 = address1;
         this.address2 = address2;
@@ -24,12 +25,20 @@ public class DebtorForm implements Serializable {
         this.email = email;
     }
 
-    public String getId() {
-        return Id;
+    public int getDebtorFormId() {
+        return debtorFormId;
     }
 
-    public void setId(String id) {
-        Id = id;
+    public void setDebtorFormId(int debtorFormId) {
+        this.debtorFormId = debtorFormId;
+    }
+
+    public String getDebtorId() {
+        return debtorId;
+    }
+
+    public void setDebtorId(String debtorId) {
+        this.debtorId = debtorId;
     }
 
     public String getName() {
@@ -78,5 +87,18 @@ public class DebtorForm implements Serializable {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    @Override
+    public String toString() {
+        return "DebtorForm{" +
+                "debtorId='" + debtorId + '\'' +
+                ", name='" + name + '\'' +
+                ", address1='" + address1 + '\'' +
+                ", address2='" + address2 + '\'' +
+                ", fax=" + fax +
+                ", phone=" + phone +
+                ", email='" + email + '\'' +
+                '}';
     }
 }
