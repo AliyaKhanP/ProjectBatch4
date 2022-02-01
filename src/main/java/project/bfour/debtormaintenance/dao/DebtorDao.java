@@ -1,74 +1,111 @@
 package project.bfour.debtormaintenance.dao;
-
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Repository;
 import project.bfour.debtormaintenance.model.BankAccount;
 import project.bfour.debtormaintenance.model.DebtorForm;
 import project.bfour.debtormaintenance.model.DetailsForm;
 import project.bfour.debtormaintenance.model.Transaction;
 
-import javax.sql.DataSource;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-@Repository
 public class DebtorDao {
 
-    public DataSource datasource() {
-        return DataSourceBuilder.create()
-                .driverClassName("com.mysql.cj.jdbc.Driver")
-                .url("jdbc:mysql://localhost:3306/project")
-                .username("root")
-                .password("Mysql@123")
-                .build();
-    }
-
-    DataSource dataSource = datasource();
-
-    public boolean insertForm(DebtorForm debtorForm, BankAccount bankAccount, Transaction transaction) {
+    public static boolean insertForm(Connection connection, DebtorForm debtorForm, BankAccount bankAccount, Transaction transaction) throws SQLException {
         String df_stmt = "insert into debtorform " +
-                " values(?,?,?,?,?,?,?,?)";
+                        " values(?,?,?,?,?,?,?,?)";
         String ba_stmt = "insert into bankform  values (?,?,?,?,?,?,?)";
         String txn_stmt = "insert into transaction values(?,?,?,?,?)";
 
-        int debtorFormId = getNewDebtorFormId(dataSource);
-        int bankFormId = getNewBankFormId(dataSource);
+        int debtorFormId = getNewDebtorFormId(connection);
+        int bankFormId = getNewBankFormId(connection);
 
-        JdbcTemplate jdbcTemplate  = new JdbcTemplate(dataSource);
-        int df_inserted = jdbcTemplate.update(df_stmt, debtorFormId,
-                debtorForm.getDebtorId(),
-                debtorForm.getName(),
-                debtorForm.getAddress1(),
-                debtorForm.getAddress2(),
-                debtorForm.getFax(),
-                debtorForm.getPhone(),
-                debtorForm.getEmail());
+        PreparedStatement debtorPreparedStatement = connection.prepareStatement(df_stmt);
+        debtorPreparedStatement.setInt(1, debtorFormId);
+        debtorPreparedStatement.setString(2, debtorForm.getId());
+        debtorPreparedStatement.setString(3, debtorForm.getName());
+        debtorPreparedStatement.setString(4, debtorForm.getAddress1());
+        debtorPreparedStatement.setString(5, debtorForm.getAddress2());
+        debtorPreparedStatement.setLong(6, debtorForm.getFax());
+        debtorPreparedStatement.setLong(7, debtorForm.getPhone());
+        debtorPreparedStatement.setString(8, debtorForm.getEmail());
+        int dStatus = debtorPreparedStatement.executeUpdate(); // save
 
-        int bf_inserted = jdbcTemplate.update(ba_stmt, bankFormId,
-                debtorFormId,
-                bankAccount.getNumber(),
-                bankAccount.getBankName(),
-                bankAccount.getBranchName(),
-                bankAccount.getSwiftAddress(),
-                bankAccount.getAccountCurrency());
+        PreparedStatement bankPreparedStatement = connection.prepareStatement(ba_stmt);
+        bankPreparedStatement.setInt(1, bankFormId);
+        bankPreparedStatement.setInt(2, debtorFormId); // debtorFormId
+        bankPreparedStatement.setLong(3, bankAccount.getNumber());
+        bankPreparedStatement.setString(4, bankAccount.getBankName());
+        bankPreparedStatement.setString(5, bankAccount.getBranchName());
+        bankPreparedStatement.setString(6, bankAccount.getSwiftAddress());
+        bankPreparedStatement.setString(7, bankAccount.getAccountCurrency());
+        int bStatus = bankPreparedStatement.executeUpdate(); // save
 
-        int tx_inserted = jdbcTemplate.update(txn_stmt, transaction.getTransactionId(),
-                bankFormId,
-                transaction.getDateTime(),
-                transaction.getStatus(),
-                transaction.getInformation());
+        PreparedStatement txnStatement = connection.prepareStatement(txn_stmt);
+        txnStatement.setString(1, transaction.getId());
+        txnStatement.setInt(2, bankFormId); // bankFormId
+        txnStatement.setString(3, transaction.getDateTime());
+        txnStatement.setString(4, transaction.getStatus());
+        txnStatement.setString(5, transaction.getInformation());
+        int txnStatus = txnStatement.executeUpdate(); // error
 
-        return df_inserted == 1 && bf_inserted == 1 && tx_inserted == 1;
+        return dStatus == 1 && bStatus == 1 && txnStatus == 1;
     }
 
-    //    For Debtor to view
-    public List<DetailsForm> getDebtorDetails(String uid){
+    public static Transaction getNewTxn(Connection connection, String debtorId) throws SQLException {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss"); // sql formatting
+        Transaction transaction = new Transaction(); // init
+        transaction.setDebtorId(debtorId); // debtor
+        transaction.setId(getNewTxnId(connection)); // new txn id
+        transaction.setDateTime(formatter.format(LocalDateTime.now())); // date time
+        transaction.setStatus("P"); // default
+        transaction.setInformation("Pending"); // default
+        return transaction;
+    }
+
+//    For admin to view all debtor details
+    public static List<DetailsForm> getDebtorDetails(Connection connection) throws SQLException {
+        String query = "select user.uid\n" +
+                ", df.name, df.address1, df.address2, df.email, df.fax, df.phone\n" +
+                ", bf.accountNumber, bf.bankName, bf.branchName, bf.swiftAddress, bf.accountCurrency\n" +
+                ", tx.transactionId, tx.date_time, tx.status, tx.information from user\n" +
+                "\n" +
+                "inner join debtorform as df on df.debtorId=user.uid\n" +
+                "\n" +
+                "inner join bankform as bf on  bf.debtorFormId=df.debtorFormId\n" +
+                "\n" +
+                "inner join transaction as tx on tx.bankFormId=bf.bankFormId where tx.status=\"P\" " +
+                "order by tx.date_time desc;";
+
+        PreparedStatement preparedStatement = connection.prepareStatement(query);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        List<DetailsForm> detailsForms = new ArrayList<>();
+        while (resultSet.next()) {
+            detailsForms.add(new DetailsForm(
+                    resultSet.getString("uid"),
+                    resultSet.getString("name"),
+                    resultSet.getString("address1"),
+                    resultSet.getString("address2"),
+                    resultSet.getLong("fax"),
+                    resultSet.getLong("phone"),
+                    resultSet.getString("email"),
+                    resultSet.getLong("accountNumber"),
+                    resultSet.getString("bankName"),
+                    resultSet.getString("branchName"),
+                    resultSet.getString("swiftAddress"),
+                    resultSet.getString("accountCurrency"),
+                    resultSet.getString("transactionId"),
+                    resultSet.getString("date_time"),
+                    resultSet.getString("status"),
+                    resultSet.getString("information")
+            ));
+        }
+        return detailsForms;
+    }
+
+//    For Debtor to view
+    public static List<DetailsForm> getDebtorDetails(Connection connection, String uid) throws SQLException {
         String query = "select user.uid\n" +
                 ", df.name, df.address1, df.address2, df.email, df.fax, df.phone\n" +
                 ", bf.accountNumber, bf.bankName, bf.branchName, bf.swiftAddress, bf.accountCurrency\n" +
@@ -80,144 +117,128 @@ public class DebtorDao {
                 "\n" +
                 "inner join transaction as tx on tx.bankFormId=bf.bankFormId where uid=? order by tx.date_time desc;";
 
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        List<DetailsForm> detailsForms = jdbcTemplate.query(query, new RowMapper<DetailsForm>() {
-            @Override
-            public DetailsForm mapRow(ResultSet rs, int rowNum) throws SQLException {
-                DetailsForm detailsForm = new DetailsForm(
-                        rs.getString("uid"),
-                        rs.getString("name"),
-                        rs.getString("address1"),
-                        rs.getString("address2"),
-                        rs.getLong("fax"),
-                        rs.getLong("phone"),
-                        rs.getString("email"),
-                        rs.getLong("accountNumber"),
-                        rs.getString("bankName"),
-                        rs.getString("branchName"),
-                        rs.getString("swiftAddress"),
-                        rs.getString("accountCurrency"),
-                        rs.getString("transactionId"),
-                        rs.getString("date_time"),
-                        rs.getString("status"),
-                        rs.getString("information")
-                );
-                return detailsForm;
-            }
-        }, uid);
+        PreparedStatement preparedStatement = connection.prepareStatement(query);
+        preparedStatement.setString(1, uid);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        List<DetailsForm> detailsForms = new ArrayList<>();
+        while (resultSet.next()) {
+            detailsForms.add(new DetailsForm(
+                    resultSet.getString("uid"),
+                    resultSet.getString("name"),
+                    resultSet.getString("address1"),
+                    resultSet.getString("address2"),
+                    resultSet.getLong("fax"),
+                    resultSet.getLong("phone"),
+                    resultSet.getString("email"),
+                    resultSet.getLong("accountNumber"),
+                    resultSet.getString("bankName"),
+                    resultSet.getString("branchName"),
+                    resultSet.getString("swiftAddress"),
+                    resultSet.getString("accountCurrency"),
+                    resultSet.getString("transactionId"),
+                    resultSet.getString("date_time"),
+                    resultSet.getString("status"),
+                    resultSet.getString("information")
+            ));
+        }
         return detailsForms;
     }
 
-    //    for view more Details view
-    public DetailsForm getDebtorDetailsByTxnId(String txnId) {
+//    for admin more Details view
+    public static DetailsForm getDebtorDetailsByTxnId(Connection connection, String txnId) throws SQLException {
         String txnQuery = "select * from transaction where transactionId=?";
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        Transaction txnSet = jdbcTemplate.queryForObject(txnQuery, new RowMapper<Transaction>() {
-            @Override
-            public Transaction mapRow(ResultSet rs, int rowNum) throws SQLException {
-                return new Transaction(rs.getInt("bankFormId"),
-                        rs.getString("transactionId"),
-                        rs.getString("date_time"),
-                        rs.getString("status"),
-                        rs.getString("information"));
-            }
-        }, txnId);
-
-        int bankFormId = txnSet.getBankFormId();
+        PreparedStatement txnStatement = connection.prepareStatement(txnQuery);
+        txnStatement.setString(1, txnId);
+        ResultSet txnSet = txnStatement.executeQuery();
+        txnSet.next();
+        int bankFormId = txnSet.getInt("bankFormId");
 
         String bankQuery = "select * from bankform where bankFormId=?";
-        BankAccount bnkSet = jdbcTemplate.queryForObject(bankQuery, new RowMapper<BankAccount>() {
-            @Override
-            public BankAccount mapRow(ResultSet rs, int rowNum) throws SQLException {
-                return new BankAccount(rs.getInt("debtorFormId"),
-                        rs.getLong("accountNumber"),
-                        rs.getString("bankName"),
-                        rs.getString("branchName"),
-                        rs.getString("swiftAddress"),
-                        rs.getString("accountCurrency"));
-            }
-        }, bankFormId);
+        PreparedStatement bankStatement = connection.prepareStatement(bankQuery);
+        bankStatement.setInt(1, bankFormId);
+        ResultSet bnkSet = bankStatement.executeQuery();
+        bnkSet.next();
+        int debtorFormId = bnkSet.getInt("debtorFormId");
 
-        int debtorFormId = bnkSet.getDebtorFormId();
 
         String debQuery = "select * from debtorform where debtorFormId=?";
-        DebtorForm debSet = jdbcTemplate.queryForObject(debQuery, new RowMapper<DebtorForm>() {
-            @Override
-            public DebtorForm mapRow(ResultSet rs, int rowNum) throws SQLException {
-                return new DebtorForm(rs.getString("debtorId"),
-                        rs.getInt("debtorFormId"),
-                        rs.getString("name"),
-                        rs.getString("address1"),
-                        rs.getString("address2"),
-                        rs.getLong("fax"),
-                        rs.getLong("phone"),
-                        rs.getString("email"));
-            }
-        }, debtorFormId);
+        PreparedStatement debStatement = connection.prepareStatement(debQuery);
+        debStatement.setInt(1, debtorFormId);
+        ResultSet debSet = debStatement.executeQuery();
+        debSet.next();
 
         return new DetailsForm(
-                debSet.getDebtorId(),
-                debSet.getName(),
-                debSet.getAddress1(),
-                debSet.getAddress2(),
-                debSet.getFax(),
-                debSet.getPhone(),
-                debSet.getEmail(),
-                bnkSet.getNumber(),
-                bnkSet.getBankName(),
-                bnkSet.getBranchName(),
-                bnkSet.getSwiftAddress(),
-                bnkSet.getAccountCurrency(),
-                txnSet.getTransactionId(),
-                txnSet.getDateTime(),
-                txnSet.getStatus(),
-                txnSet.getInformation()
+                debSet.getString("debtorId"),
+                debSet.getString("name"),
+                debSet.getString("address1"),
+                debSet.getString("address2"),
+                debSet.getLong("fax"),
+                debSet.getLong("phone"),
+                debSet.getString("email"),
+                bnkSet.getLong("accountNumber"),
+                bnkSet.getString("bankName"),
+                bnkSet.getString("branchName"),
+                bnkSet.getString("swiftAddress"),
+                bnkSet.getString("accountCurrency"),
+                txnSet.getString("transactionId"),
+                txnSet.getString("date_time"),
+                txnSet.getString("Status"),
+                txnSet.getString("information")
         );
     }
 
-    public Transaction getNewTxn() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); // sql formatting
-        Transaction transaction = new Transaction(); // init
-        transaction.setTransactionId(getNewTxnId(dataSource)); // new txn id
-        transaction.setDateTime(formatter.format(LocalDateTime.now())); // date time
-        transaction.setStatus("P"); // default
-        transaction.setInformation("Pending"); // default
-        return transaction;
-    }
-
-    private static String getNewTxnId(DataSource dataSource) {
-        String txnId = UUID.randomUUID().toString().replace("-", "");
-        String checkQuery = "select count(*) as count from transaction where transactionId='" + txnId +  "'";
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        int count = jdbcTemplate.queryForObject(checkQuery, Integer.class);
-        while (count != 0) {
-            txnId = UUID.randomUUID().toString().replace("-", "");
+//    Private Methods
+    private static String getNewTxnId(Connection connection) throws SQLException{
+        Statement statement = connection.createStatement();
+        ResultSet resultSet;
+        String checkQuery = "select count(*) as count from transaction";
+        resultSet = statement.executeQuery(checkQuery);
+        resultSet.next();
+        if (resultSet.getInt("count") == 0) {
+            return "txn-100";
         }
-        return txnId;
+        String query = "select max(transactionId) as max from transaction";
+        statement = connection.createStatement();
+        resultSet = statement.executeQuery(query);
+        resultSet.next();
+        String tid = resultSet.getString("max");
+        tid = tid.replace("txn-", "");
+        int id = Integer.parseInt(tid);
+        return "txn-" + (++id);
     }
 
-    private static int getNewDebtorFormId(DataSource dataSource) {
-        String checkQuery = "select count(*) from debtorform";
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        int count = jdbcTemplate.queryForObject(checkQuery, Integer.class);
-        if (count == 0) {
+    private static int getNewDebtorFormId(Connection connection) throws SQLException{
+        Statement statement = connection.createStatement();
+        ResultSet resultSet;
+        String checkQuery = "select count(*) as count from debtorform";
+        resultSet = statement.executeQuery(checkQuery);
+        resultSet.next();
+        if (resultSet.getInt("count") == 0) {
             return 1;
         }
-        String query = "select max(debtorFormId) from debtorform";
-        int id = jdbcTemplate.queryForObject(query, Integer.class);
+        String query = "select max(debtorFormId) as max from debtorform";
+        statement = connection.createStatement();
+        resultSet = statement.executeQuery(query);
+        resultSet.next();
+        int id = resultSet.getInt("max");
         return (++id);
     }
 
-    private static int getNewBankFormId(DataSource dataSource) {
-
-        String checkQuery = "select count(*) from bankform";
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        int count = jdbcTemplate.queryForObject(checkQuery, Integer.class);
-        if (count == 0) {
+    private static int getNewBankFormId(Connection connection) throws SQLException{
+        Statement statement = connection.createStatement();
+        ResultSet resultSet;
+        String checkQuery = "select count(*) as count from bankform";
+        resultSet = statement.executeQuery(checkQuery);
+        resultSet.next();
+        if (resultSet.getInt("count") == 0) {
             return 1;
         }
-        String query = "select max(bankFormId) from bankform";
-        int id = jdbcTemplate.queryForObject(query, Integer.class);
+        String query = "select max(bankFormId) as max from bankform";
+        statement = connection.createStatement();
+        resultSet = statement.executeQuery(query);
+        resultSet.next();
+        int id = resultSet.getInt("max");
         return (++id);
     }
+
 }

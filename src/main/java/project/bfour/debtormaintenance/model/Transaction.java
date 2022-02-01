@@ -1,8 +1,10 @@
 package project.bfour.debtormaintenance.model;
 
-public class Transaction {
-    private int bankFormId;
-    private String transactionId;
+import java.io.Serializable;
+
+public class Transaction implements Serializable {
+    private String debtorId;
+    private String id;
     private String dateTime;
     private String status;
     private String information;
@@ -10,28 +12,28 @@ public class Transaction {
     public Transaction() {
     }
 
-    public Transaction(int bankFormId, String transactionId, String dateTime, String status, String information) {
-        this.bankFormId = bankFormId;
-        this.transactionId = transactionId;
+    public Transaction(String debtorId, String id, String dateTime, String status, String information) {
+        this.debtorId = debtorId;
+        this.id = id;
         this.dateTime = dateTime;
         this.status = status;
         this.information = information;
     }
 
-    public int getBankFormId() {
-        return bankFormId;
+    public String getDebtorId() {
+        return debtorId;
     }
 
-    public void setBankFormId(int bankFormId) {
-        this.bankFormId = bankFormId;
+    public void setDebtorId(String debtorId) {
+        this.debtorId = debtorId;
     }
 
-    public String getTransactionId() {
-        return transactionId;
+    public String getId() {
+        return id;
     }
 
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getDateTime() {
@@ -58,14 +60,4 @@ public class Transaction {
         this.information = information;
     }
 
-    @Override
-    public String toString() {
-        return "Transaction{" +
-                "bankFormId=" + bankFormId +
-                ", transactionId='" + transactionId + '\'' +
-                ", dateTime='" + dateTime + '\'' +
-                ", status='" + status + '\'' +
-                ", information='" + information + '\'' +
-                '}';
-    }
 }

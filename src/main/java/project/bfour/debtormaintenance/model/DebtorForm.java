@@ -1,9 +1,9 @@
 package project.bfour.debtormaintenance.model;
 
-public class DebtorForm {
+import java.io.Serializable;
 
-    private String debtorId; // Debtor ID
-    private int debtorFormId;
+public class DebtorForm implements Serializable {
+    private String Id;
     private String name;
     private String address1;
     private String address2;
@@ -14,9 +14,8 @@ public class DebtorForm {
     public DebtorForm() {
     }
 
-    public DebtorForm(String debtorId, int debtorFormId, String name, String address1, String address2, long fax, long phone, String email) {
-        this.debtorId = debtorId;
-        this.debtorFormId = debtorFormId;
+    public DebtorForm(String id, String name, String address1, String address2, long fax, long phone, String email) {
+        Id = id;
         this.name = name;
         this.address1 = address1;
         this.address2 = address2;
@@ -25,20 +24,12 @@ public class DebtorForm {
         this.email = email;
     }
 
-    public int getDebtorFormId() {
-        return debtorFormId;
+    public String getId() {
+        return Id;
     }
 
-    public void setDebtorFormId(int debtorFormId) {
-        this.debtorFormId = debtorFormId;
-    }
-
-    public String getDebtorId() {
-        return debtorId;
-    }
-
-    public void setDebtorId(String debtorId) {
-        this.debtorId = debtorId;
+    public void setId(String id) {
+        Id = id;
     }
 
     public String getName() {
@@ -87,18 +78,5 @@ public class DebtorForm {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    @Override
-    public String toString() {
-        return "DebtorForm{" +
-                "debtorId='" + debtorId + '\'' +
-                ", name='" + name + '\'' +
-                ", address1='" + address1 + '\'' +
-                ", address2='" + address2 + '\'' +
-                ", fax=" + fax +
-                ", phone=" + phone +
-                ", email='" + email + '\'' +
-                '}';
     }
 }
